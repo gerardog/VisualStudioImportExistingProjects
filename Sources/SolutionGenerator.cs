@@ -20,8 +20,7 @@ namespace SolutionGenerator
     class SolutionGenerator
     {
         string Template =
-@"
-Microsoft Visual Studio Solution File, Format Version 12.00
+@"Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -31,23 +30,23 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-{1}
-	EndGlobalSection
+{1}	EndGlobalSection
 EndGlobal
 ";
 
 
-        private readonly Arguments _args;
+        private readonly Options _args;
         private HashSet<string> _excludedFolders;
-        public SolutionGenerator(Arguments args)
+        public SolutionGenerator(Options args)
         {
             _args = args;
-            _excludedFolders = new HashSet<string>(".git,bin,obj,packages,node_modules".Split(','));
+            _excludedFolders = new HashSet<string>(_args.ExcludedFolders.Split(','));
         }
 
         public void Render()
         {
             var content = GetContent(_args.Folder);
+            content.FolderId = string.Empty; // Root folder is a special case
 
             StringBuilder projectSection = new StringBuilder();
             StringBuilder folderSection = new StringBuilder();
@@ -58,6 +57,9 @@ EndGlobal
                 Path.Combine(_args.Folder, _args.SolutionFileName),
                 string.Format(Template, projectSection.ToString(), folderSection.ToString())
                 );
+
+            Console.WriteLine("Done.");
+
         }
 
         private void WriteContent(FolderContent content, StringBuilder projectSection, StringBuilder folderSection)
@@ -67,7 +69,10 @@ EndGlobal
                 projectSection.AppendLine($"Project(\"{{2150E333-8FDC-42A3-9474-1A3956D46DE8}}\") = \"{ Path.GetFileName(dir.Path) }\", \"{ Path.GetFileName(dir.Path) }\", \"{{{dir.FolderId}}}\"");
                 projectSection.AppendLine("EndProject");
 
-                folderSection.AppendLine($"		{{{dir.FolderId}}} = {{{content.FolderId}}}");
+                if (!string.IsNullOrEmpty(content.FolderId))
+                {
+                    folderSection.AppendLine($"		{{{dir.FolderId}}} = {{{content.FolderId}}}");
+                }
                 WriteContent(dir, projectSection, folderSection);
             }
 
@@ -78,7 +83,8 @@ EndGlobal
 
                 projectSection.AppendLine($"Project(\"{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}\") = \"{ Path.GetFileNameWithoutExtension(project) }\", \"{ MakeRelative(project) }\", \"{{{projectId}}}\"");
                 projectSection.AppendLine("EndProject");
-                folderSection.AppendLine($"		{{{projectId}}} = {{{content.FolderId}}}");
+                if (!string.IsNullOrEmpty(content.FolderId))
+                    folderSection.AppendLine($"		{{{projectId}}} = {{{content.FolderId}}}");
             }
         }
 
@@ -89,7 +95,8 @@ EndGlobal
 
         FolderContent GetContent(string folder)
         {
-            Console.WriteLine(folder);
+            if(_args.Verbose)
+                Console.WriteLine(folder);
             var content = new FolderContent();
             content.Path = folder;
             try
@@ -102,15 +109,14 @@ EndGlobal
                     var subContent = GetContent(subFolder);
                     if (subContent.IsEmpty())
                         continue;
-                    else if (subContent.SubDirectories.Count() == 0 && subContent.Projects.Count()==1)
-                        content.Projects.AddRange(subContent.Projects);
-//                    else if (subContent.Projects.Count == 1 && Path.GetFileNameWithoutExtension(subContent.Projects[0]) == folderName && subContent.SubDirectories.Count == 0)
-//                        content.Projects.Add(subContent.Projects[0]);
+                    else if (subContent.SubDirectories.Count() == 0 && subContent.Projects.Count()==1) 
+                        content.Projects.AddRange(subContent.Projects); // Flatten folders with only one project.
                     else
                         content.SubDirectories.Add(subContent);
                 }
             }
-            catch (PathTooLongException) { }
+            catch (PathTooLongException)
+            { Console.Error.WriteLine($"PathTooLongException: {folder}"); }
 
             try
             {
@@ -119,7 +125,8 @@ EndGlobal
                     content.Projects.Add(subProj);
                 }
             }
-            catch (PathTooLongException) { }
+            catch (PathTooLongException)
+            { Console.Error.WriteLine($"PathTooLongException: {folder}"); }
             return content;
         }
     }

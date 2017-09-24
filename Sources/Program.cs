@@ -1,45 +1,32 @@
-﻿using Fclp;
+﻿using CommandLine;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+[assembly: CommandLine.AssemblyUsageAttribute("Finds all Visual Studio projects in a folder tree and adds them to a new solution file.")]
 
 namespace SolutionGenerator
 {
-    public class Arguments
+    public class Options
     {
+        [Option('f', "folder", HelpText = "Folder to traverse and where the solution will be generated.", Required = true)]
         public string Folder { get; set; }
+        [Option('o', "output", HelpText = "FileName of the solution to create.", DefaultValue = "AllProjects.sln")]
         public string SolutionFileName { get; set; }
+        [Option('e', "exclude", HelpText = "Comma separated list of folders to exclude.", DefaultValue = ".git,bin,obj,packages,node_modules")]
+        public string ExcludedFolders { get; set; }
+        [Option('v', "verbose", HelpText = "Verbose")]
+        public bool Verbose { get; set; }
+
     }
 
     class Program
     {
         static void Main(string[] args)
         {
-            var parser = new FluentCommandLineParser<Arguments>();
-
-            parser.Setup(a => a.Folder)
-                .As('f', "folder")
-                .SetDefault(Directory.GetCurrentDirectory());
-
-            parser.Setup(a => a.SolutionFileName)
-                .As('d', "dest")
-                .Required();
-
-            var result = parser.Parse(args);
-
-            if (result.HasErrors)
-            {
-                Console.WriteLine( result.ErrorText);
-                Console.Read();
-                return;
-            }
-
-            parser.Object.Folder = Path.GetFullPath(parser.Object.Folder);
-
-            new SolutionGenerator(parser.Object).Render();
+            var options = new Options();
+            var isValid = Parser.Default.ParseArgumentsStrict(args, options);
+            if (isValid)
+                new SolutionGenerator(options).Render();
         }
+
     }
 }
