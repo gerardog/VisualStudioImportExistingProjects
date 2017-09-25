@@ -103,8 +103,7 @@ EndGlobal
             {
                 foreach (var subFolder in Directory.GetDirectories(folder))
                 {
-                    var folderName = Path.GetFileName(folder);
-                    if (_excludedFolders.Contains(folderName)) continue;
+                    if (_excludedFolders.Contains(Path.GetFileName(subFolder))) continue;
 
                     var subContent = GetContent(subFolder);
                     if (subContent.IsEmpty())
