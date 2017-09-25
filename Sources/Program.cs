@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using System;
+using System.IO;
 
 [assembly: CommandLine.AssemblyUsageAttribute("Finds all Visual Studio projects in a folder tree and adds them to a new solution file.")]
 
@@ -24,6 +25,7 @@ namespace SolutionGenerator
         {
             var options = new Options();
             var isValid = Parser.Default.ParseArgumentsStrict(args, options);
+            options.Folder = Path.GetFullPath(options.Folder);
             if (isValid)
                 new SolutionGenerator(options).Render();
         }

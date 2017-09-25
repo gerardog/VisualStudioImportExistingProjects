@@ -53,13 +53,13 @@ EndGlobal
 
             WriteContent(content, projectSection, folderSection);
 
+            var outputFile = Path.Combine(_args.Folder, _args.SolutionFileName);
             File.WriteAllText(
-                Path.Combine(_args.Folder, _args.SolutionFileName),
+                outputFile,
                 string.Format(Template, projectSection.ToString(), folderSection.ToString())
                 );
 
-            Console.WriteLine("Done.");
-
+            Console.WriteLine($"Output written to {outputFile}.");
         }
 
         private void WriteContent(FolderContent content, StringBuilder projectSection, StringBuilder folderSection)
