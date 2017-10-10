@@ -14,8 +14,9 @@ namespace SolutionGenerator
         public List<string> Projects = new List<string>();
         public List<FolderContent> SubDirectories = new List<FolderContent>();
         public bool IsEmpty() => !Projects.Any() && SubDirectories.All(sd=>sd.IsEmpty());
-        public string FolderId = (FolderSequentialGuid++).CurrentGuid.ToString().ToUpper();
+        public Lazy<string> FolderId = new Lazy<string>(() => (FolderSequentialGuid++).CurrentGuid.ToString().ToUpper());
         public string Path;
+        public bool IsRoot;
     }
 
     class SolutionGenerator
@@ -25,8 +26,13 @@ namespace SolutionGenerator
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-{0}
-Global
+{0}Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+{2}	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
@@ -47,34 +53,35 @@ EndGlobal
         public void Render()
         {
             var content = GetContent(_args.Folder);
-            content.FolderId = string.Empty; // Root folder is a special case
+            content.IsRoot = true; // Root folder is a special case
 
             StringBuilder projectSection = new StringBuilder();
             StringBuilder folderSection = new StringBuilder();
+            StringBuilder buildConfigSection = new StringBuilder();
 
-            WriteContent(content, projectSection, folderSection);
+            WriteContent(content, projectSection, folderSection, buildConfigSection);
 
             var outputFile = Path.Combine(_args.Folder, _args.SolutionFileName);
             File.WriteAllText(
                 outputFile,
-                string.Format(Template, projectSection.ToString(), folderSection.ToString())
+                string.Format(Template, projectSection.ToString(), folderSection.ToString(), buildConfigSection.ToString())
                 );
 
             Console.WriteLine($"Output written to {outputFile}.");
         }
 
-        private void WriteContent(FolderContent content, StringBuilder projectSection, StringBuilder folderSection)
+        private void WriteContent(FolderContent content, StringBuilder projectSection, StringBuilder folderSection, StringBuilder buildConfigSection)
         {
             foreach (var dir in content.SubDirectories)
             {
-                projectSection.AppendLine($"Project(\"{{2150E333-8FDC-42A3-9474-1A3956D46DE8}}\") = \"{ Path.GetFileName(dir.Path) }\", \"{ Path.GetFileName(dir.Path) }\", \"{{{dir.FolderId}}}\"");
+                projectSection.AppendLine($"Project(\"{{2150E333-8FDC-42A3-9474-1A3956D46DE8}}\") = \"{ Path.GetFileName(dir.Path) }\", \"{ Path.GetFileName(dir.Path) }\", \"{{{dir.FolderId.Value}}}\"");
                 projectSection.AppendLine("EndProject");
 
-                if (!string.IsNullOrEmpty(content.FolderId))
+                if (!content.IsRoot)
                 {
-                    folderSection.AppendLine($"		{{{dir.FolderId}}} = {{{content.FolderId}}}");
+                    folderSection.AppendLine($"		{{{dir.FolderId.Value}}} = {{{content.FolderId.Value}}}");
                 }
-                WriteContent(dir, projectSection, folderSection);
+                WriteContent(dir, projectSection, folderSection, buildConfigSection);
             }
 
             foreach (var project in content.Projects)
@@ -84,8 +91,14 @@ EndGlobal
 
                 projectSection.AppendLine($"Project(\"{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}\") = \"{ Path.GetFileNameWithoutExtension(project) }\", \"{ MakeRelative(project) }\", \"{{{projectId}}}\"");
                 projectSection.AppendLine("EndProject");
-                if (!string.IsNullOrEmpty(content.FolderId))
-                    folderSection.AppendLine($"		{{{projectId}}} = {{{content.FolderId}}}");
+
+                if (!content.IsRoot)
+                    folderSection.AppendLine($"		{{{projectId}}} = {{{content.FolderId.Value}}}");
+
+                buildConfigSection.AppendLine($"		{{{projectId}}}.Debug|Any CPU.ActiveCfg = Debug|Any CPU");
+                buildConfigSection.AppendLine($"		{{{projectId}}}.Debug|Any CPU.Build.0 = Debug|Any CPU");
+                buildConfigSection.AppendLine($"		{{{projectId}}}.Release|Any CPU.ActiveCfg = Debug|Any CPU");
+                buildConfigSection.AppendLine($"		{{{projectId}}}.Release|Any CPU.Build.0 = Debug|Any CPU");
             }
         }
 
