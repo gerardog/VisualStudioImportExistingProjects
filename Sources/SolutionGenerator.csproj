@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SequentialGuid.cs" />
     <Compile Include="SolutionGenerator.cs" />
   </ItemGroup>
   <ItemGroup>

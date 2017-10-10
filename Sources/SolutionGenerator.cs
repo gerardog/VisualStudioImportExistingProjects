@@ -9,12 +9,13 @@ namespace SolutionGenerator
 {
     class FolderContent
     {
+        static SequentialGuid FolderSequentialGuid = new SequentialGuid(Guid.Empty);
+
         public List<string> Projects = new List<string>();
         public List<FolderContent> SubDirectories = new List<FolderContent>();
         public bool IsEmpty() => !Projects.Any() && SubDirectories.All(sd=>sd.IsEmpty());
-        public string FolderId = Guid.NewGuid().ToString().ToUpper();
+        public string FolderId = (FolderSequentialGuid++).CurrentGuid.ToString().ToUpper();
         public string Path;
-
     }
 
     class SolutionGenerator
