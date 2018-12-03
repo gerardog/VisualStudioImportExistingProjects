@@ -41,6 +41,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 EndGlobal
 ";
 
+        static SequentialGuid ProjectSequentialGuids = new SequentialGuid(Guid.Parse("99990000-0000-0000-0000-000000000000"));
 
         private readonly Options _args;
         private HashSet<string> _excludedFolders;
@@ -87,7 +88,11 @@ EndGlobal
             foreach (var project in content.Projects)
             {
                 var projectId = File.ReadAllText(Path.Combine(content.Path, project))  ;
-                projectId = projectId.Substring(projectId.IndexOf("<ProjectGuid>") + 14, 36);
+                int strPos = projectId.IndexOf("<ProjectGuid>");
+                if (strPos >= 0)
+                    projectId = projectId.Substring(strPos + 14, 36);
+                else
+                    projectId = (ProjectSequentialGuids++).CurrentGuid.ToString().ToUpperInvariant();
 
                 projectSection.AppendLine($"Project(\"{{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}}\") = \"{ Path.GetFileNameWithoutExtension(project) }\", \"{ MakeRelative(project) }\", \"{{{projectId}}}\"");
                 projectSection.AppendLine("EndProject");

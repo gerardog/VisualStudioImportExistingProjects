@@ -25,7 +25,7 @@ namespace SolutionGenerator
         {
             var options = new Options();
             var isValid = Parser.Default.ParseArgumentsStrict(args, options);
-            options.Folder = Path.GetFullPath(options.Folder);
+            options.Folder = Path.GetFullPath(options.Folder).TrimEnd(Path.DirectorySeparatorChar);
             if (isValid)
                 new SolutionGenerator(options).Render();
         }
